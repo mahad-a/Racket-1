@@ -1,5 +1,7 @@
 #lang racket
 
+;;;;; Mahad Ahmed 101220427
+
 ;;(require (planet dyoo/simply-scheme))
 ;;(provide (all-defined-out))
 
@@ -74,21 +76,25 @@
     ; Exercise 6 
     ((map-exp? exp)
          (cond
-           [(empty? (cdddr exp))
+           [(empty? (cdddr exp)) ; if the map is being called on just 1 list
             (map (eval (cadr exp)) (eval (caddr exp)))]
-           [else
+           [else ; otherwise apply map to all lists 
             (map (eval (cadr exp)) (eval (caddr exp)) (eval (cadddr exp)))]))
      
 
     ; Exercise 7
     ((and-exp? exp)
          (define (eval-1-and exp-1)
+           ; recursively call to ensure we stop at the very first false
            (cond
-             [(null? exp-1) #t]
+             [(null? exp-1) #t] ; empty list
+             ; reached end of the expression, evaluate the last element
              [(null? (cdr exp-1)) (eval-1 (car exp-1))]
+             ; if evaluates to false, return false immediately (dont evaluate the rest)
              [(equal? (eval-1 (car exp-1)) #f) #f]
+             ; continue down the expression
              [else (eval-1-and (cdr exp-1))]))
-         (eval-1-and (cdr exp)))
+         (eval-1-and (cdr exp))) ; call recursive process
     
     ((if-exp? exp)
      (if (eval-1 (cadr exp))
@@ -147,13 +153,13 @@
 
 ;; Exercise 6 solution
 (define (map-exp? exp)
-  (and (exp-checker 'map-1)
+  (and (exp-checker 'map-1) ; check if the expression is calling map-1
        (eq? (car exp) 'map-1)))
 
 ;; Exercise 7 solution
 (define (and-exp? exp)
-  (and (pair? exp)
-       (eq? (car exp) 'and)))
+  (and (pair? exp) ; expression must be a pair
+       (eq? (car exp) 'and))) ; check if the expression is calling and
 
 (define if-exp? (exp-checker 'if))
 (define lambda-exp? (exp-checker 'lambda))
