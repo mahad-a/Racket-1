@@ -66,7 +66,30 @@
 (define (eval-1 exp)
   (cond ((constant? exp) exp)
     ((symbol? exp) (eval exp))  ; use underlying Racket's EVAL
-    ((quote-exp? exp) (cadr exp))
+    ; Exercise 5
+    ((quote-exp? exp)
+         (if (= (length exp) 2) ; first check to ensure that there is only 2 arguments (quote and arg)
+             (cadr exp) ; evaluate and return quoted value if so
+             (error "quote can only have one parameter"))) ; otherwise throw error
+    ; Exercise 6 
+    ((map-exp? exp)
+         (cond
+           [(empty? (cdddr exp))
+            (map (eval (cadr exp)) (eval (caddr exp)))]
+           [else
+            (map (eval (cadr exp)) (eval (caddr exp)) (eval (cadddr exp)))]))
+     
+
+    ; Exercise 7
+    ((and-exp? exp)
+         (define (eval-1-and exp-1)
+           (cond
+             [(null? exp-1) #t]
+             [(null? (cdr exp-1)) (eval-1 (car exp-1))]
+             [(equal? (eval-1 (car exp-1)) #f) #f]
+             [else (eval-1-and (cdr exp-1))]))
+         (eval-1-and (cdr exp)))
+    
     ((if-exp? exp)
      (if (eval-1 (cadr exp))
          (eval-1 (caddr exp))
@@ -118,11 +141,19 @@
 
 ;; fixed solution
 (define (quote-exp? exp)
-  (cond
-    [(and (pair? exp) ; check if the expression is a pair (quote and parameters)
-          (eq? (car exp) 'quote) ; first item in list is 'quote
-          (= (length exp) 2))] ; only 2 items in list (quote and parameters)
-    [else (error "cannot evaluate a quote expression with multiple arguments")]))
+  (and (pair? exp)  ; check if the expression is a pair (quote and parameters)
+       (eq? (car exp) 'quote) ; first item in list is 'quote
+       (= (length exp) 2))) ; only 2 items in list (quote and parameters)
+
+;; Exercise 6 solution
+(define (map-exp? exp)
+  (and (exp-checker 'map-1)
+       (eq? (car exp) 'map-1)))
+
+;; Exercise 7 solution
+(define (and-exp? exp)
+  (and (pair? exp)
+       (eq? (car exp) 'and)))
 
 (define if-exp? (exp-checker 'if))
 (define lambda-exp? (exp-checker 'lambda))
@@ -230,3 +261,34 @@
 ;         first
 ;         '(the rain in spain))
 ; (t r i s)
+
+;; Exercise 6 map-1
+(define (map-1 f lst)
+  (map f lst))
+#|
+; Each of the test cases worth 1 grade
+(quote 1)
+(quote (1 2))
+(quote (1 2 3))
+(quote 1 2 3) ;Error
+(quote (1 2 3) (4 5 6));Error
+
+; 1 grade for procedure map-1-exp?
+(map-1 + '(1 2 3 4)) ;'(1 2 3 4)
+(map-1 + '(1 2 3 4) '(10 20 30 40));'(11 22 33 44)
+(map-1 abs '(-1 -2 3 4)) ;'(1 2 3 4)
+(map-1 (lambda (x) (* x x)) '(1 2 3 4)) ;'(1 4 9 16)
+(map-1 (lambda (x y) (* x y)) '(1 2 3 4) '(10 20 30 40)) ;'(10 40 90 160)
+(map-1 (lambda (x y) (* x y)) '(1 2 3 4) );error
+(map-1 (lambda (x ) (* x 1 )) '(1 2 3 4) );'(1 2 3 4)
+(map-1 abs '(-1 -2 3 4) '(-1 -2 3 4));error
+(map-1 (lambda (x y) (* x x)) '(1 2 3 4) '(10 20 30 40)) ; '(1 4 9 16)
+
+
+
+; 1 grade for where did the student add the and_exp? condition
+(and (= 5 (+ 2 4)) (* 3 4)) ;#f  ; (* 3 4) is not evaluated
+(and (= 5 (+ 2 3)) (* 3 4)) ;12
+(and (= 5 (+ 2 3)) (< 6 (* 4 3))) ;#t
+(and (= 5 (+ 2 4)) (< 6 (* 4 3))) ;#f  ; (< 6 (* 4 3)) is not evaluated
+|#

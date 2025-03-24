@@ -86,32 +86,49 @@
          (displayln "symbol? is true")
          (eval exp))  ; use underlying Racket's EVAL
 
+        ((and-exp? exp)
+         (displayln "and? is true")
+         (define (eval-1-and exp-1)
+           (cond
+             [(null? exp-1) #t]
+             [(null? (cdr exp-1)) (eval-1 (car exp-1))]
+             [(equal? (eval-1 (car exp-1)) #f) #f]
+             [else (eval-1-and (cdr exp-1))]))
+         (eval-1-and (cdr exp)))
+           
+
         ((map-exp? exp)
          (displayln "map? is true")
-         (map (eval-1 (cadr exp)) (eval-1 (caddr exp))))
+         (displayln exp)
+         (displayln (cadr exp))
+         (displayln (caddr exp))
+         (displayln (cddr exp))
+         (displayln (cdddr exp))
+         (cond
+           [(empty? (cdddr exp)) (map (eval (cadr exp)) (eval (caddr exp)))]
+           [else (map (eval (cadr exp)) (eval (caddr exp)) (eval (cadddr exp)))]))
+     
         
         ((if-exp? exp)
          (displayln "if-exp? is true")
          (if (eval-1 (cadr exp))   ; use underlying Racket's IF
-             (eval-1 (caddr exp))
+             (eval-1 (cadr exp))
              (eval-1 (cadddr exp))))
         
         ((lambda-exp? exp)
          (displayln "lambda-exp? is true")
          exp)
 
-        ;((and-exp? exp) (displayln "and-exp? is true"))
-
-        ((pair? exp)
-         (displayln "pair? is true")
-         (apply-1 (eval-1 (car exp))      ; eval the operator
-                  (map eval-1 (cdr exp))))
-
         ((quote-exp? exp)
          (displayln "quote? is true")
          (if (= (length exp) 2)
              (cadr exp)
              (error "quote can only have one parameter")))
+
+        ((pair? exp)
+         (displayln "pair? is true")
+         (apply-1 (eval-1 (car exp))      ; eval the operator
+                  (map eval-1 (cdr exp))))
         
         (else (error "bad expr: " exp))))
 
@@ -181,8 +198,12 @@
        (= (length exp) 2)))
 
 (define (map-exp? exp)
-  (and (pair? exp)
+  (and (exp-checker 'map-1)
        (eq? (car exp) 'map-1)))
+
+(define (and-exp? exp)
+  (and (pair? exp)
+       (eq? (car exp) 'and)))
        
 
 (define if-exp? (exp-checker 'if))
@@ -304,3 +325,31 @@
 
 (define (map-1 f lst)
   (map f lst))
+
+#|
+; Each of the test cases worth 1 grade
+(quote 1)
+(quote (1 2))
+(quote (1 2 3))
+(quote 1 2 3) ;Error
+(quote (1 2 3) (4 5 6));Error
+
+; 1 grade for procedure map-1-exp?
+(map-1 + '(1 2 3 4)) ;'(1 2 3 4)
+(map-1 + '(1 2 3 4) '(10 20 30 40));'(11 22 33 44)
+(map-1 abs '(-1 -2 3 4)) ;'(1 2 3 4)
+(map-1 (lambda (x) (* x x)) '(1 2 3 4)) ;'(1 4 9 16)
+(map-1 (lambda (x y) (* x y)) '(1 2 3 4) '(10 20 30 40)) ;'(10 40 90 160)
+(map-1 (lambda (x y) (* x y)) '(1 2 3 4) );error
+(map-1 (lambda (x ) (* x 1 )) '(1 2 3 4) );'(1 2 3 4)
+(map-1 abs '(-1 -2 3 4) '(-1 -2 3 4));error
+(map-1 (lambda (x y) (* x x)) '(1 2 3 4) '(10 20 30 40)) ; '(1 4 9 16)
+
+
+
+; 1 grade for where did the student add the and_exp? condition
+(and (= 5 (+ 2 4)) (* 3 4)) ;#f  ; (* 3 4) is not evaluated
+(and (= 5 (+ 2 3)) (* 3 4)) ;12
+(and (= 5 (+ 2 3)) (< 6 (* 4 3))) ;#t
+(and (= 5 (+ 2 4)) (< 6 (* 4 3))) ;#f  ; (< 6 (* 4 3)) is not evaluated
+|#
